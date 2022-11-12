@@ -28,7 +28,8 @@ import math
 from colorama import Fore, Back, Style
 #from pruebas import ListaPaquetes
 
-
+#Esta clase es la que se encarga del control total del reenvio de paquetes en el switch. Se controlan todos los paquetes mediante el analisis y comparacion
+#con las políticas implementadas.
 class SimpleSwitch13(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
@@ -225,40 +226,40 @@ class SimpleSwitch13(app_manager.RyuApp):
                                 if((tasa_calculada > tasa_politica) & (IP_origen not in Politicas['Datos'][IP_destino][politica]['IPs_bloqueadas'])):
                                     #print("Debe bloquearse " + IP_origen)
                                     Politicas['Datos'][IP_destino][politica]['IPs_bloqueadas'].update({IP_origen:instante_llegada})
+                                                                
+                                else: 
+                                    eth = pkt.get_protocols(ethernet.ethernet)[0] #ryu.lib.packet.ethernet.ethernet
+                                    if eth.ethertype == ether_types.ETH_TYPE_LLDP:
+                                        # ignore lldp packet
+                                        return
                                     
+                                    dst = eth.dst
+                                    src = eth.src
 
-                                                
+                                    dpid = format(datapath.id, "d").zfill(16)
+                                    self.mac_to_port.setdefault(dpid, {})
+
+                                    self.logger.debug("packet in %s %s %s %s", dpid, src, dst, in_port)
+                                    # learn a mac address to avoid FLOOD next time.
+                                    self.mac_to_port[dpid][src] = in_port
+
+                                    if dst in self.mac_to_port[dpid]:
+                                        out_port = self.mac_to_port[dpid][dst]
+                                    else:
+                                        out_port = ofproto.OFPP_FLOOD
+
+                                    actions = [parser.OFPActionOutput(out_port)]                            
+                                    data = None
+                                    if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                                        data = msg.data
+                                    
+                                    out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
+                                                            in_port=in_port, actions=actions, data=data)
+                                    datapath.send_msg(out)
+
                             with open('Politicas.json', 'w') as file:
                                 json.dump(Politicas,file,indent=4)
-                    
-                            eth = pkt.get_protocols(ethernet.ethernet)[0] #ryu.lib.packet.ethernet.ethernet
-                            if eth.ethertype == ether_types.ETH_TYPE_LLDP:
-                                # ignore lldp packet
-                                return
-                            
-                            dst = eth.dst
-                            src = eth.src
 
-                            dpid = format(datapath.id, "d").zfill(16)
-                            self.mac_to_port.setdefault(dpid, {})
-
-                            self.logger.debug("packet in %s %s %s %s", dpid, src, dst, in_port)
-                            # learn a mac address to avoid FLOOD next time.
-                            self.mac_to_port[dpid][src] = in_port
-
-                            if dst in self.mac_to_port[dpid]:
-                                out_port = self.mac_to_port[dpid][dst]
-                            else:
-                                out_port = ofproto.OFPP_FLOOD
-
-                            actions = [parser.OFPActionOutput(out_port)]                            
-                            data = None
-                            if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                                data = msg.data
-                            
-                            out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
-                                                    in_port=in_port, actions=actions, data=data)
-                            datapath.send_msg(out)
                 else:
                     eth = pkt.get_protocols(ethernet.ethernet)[0] #ryu.lib.packet.ethernet.ethernet
                     if eth.ethertype == ether_types.ETH_TYPE_LLDP:
