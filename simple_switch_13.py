@@ -114,6 +114,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         IP_destino = ""
         global CONTADOR_PAQUETES
         CONDICION = 1
+        CONDICIONBLOQUEO = 1
 
         
         for p in pkt.protocols:
@@ -180,8 +181,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                 #Se comprueba si el puerto destino del paquete coincide con alguna politica
                 for politica in Politicas['Datos'][IP_destino].keys():
                     #print(politica)
-                    
-
+  
                     if(Politicas['Datos'][IP_destino][politica]['puerto'] == str(p.dst_port)):
                         print("\tPolitica aplicada: " + politica)
                         #Se comprueba si la IP origen esta bloqueada, y en caso afirmativo, se comprueba si ha superado ya el limite de bloqueo.
@@ -210,7 +210,8 @@ class SimpleSwitch13(app_manager.RyuApp):
                                 CONTADOR_PAQUETES = ListaPaquetes(int(Politicas['Datos'][IP_destino][politica]['tamano_VentanaTiempo']))
                                 Actualizado_PAQ_SEG = CONTADOR_PAQUETES.anade_paquete(instante_llegada,CONTADOR_PAQUETES.paquetes_segundos)
                                 Politicas['Datos'][IP_destino][politica]['origenes'].update({IP_origen:Actualizado_PAQ_SEG})
-                        
+                                eth = pkt.get_protocols(ethernet.ethernet)[0] #ryu.lib.packet.ethernet.ethernet
+                                
                         #Cuando si se encuentre el origen en el diccionario, se sumara un paquete al segundo correspondiente. Posteriormente 
                         #se comprueba si la tasa de llegada de un origen es mayor que la tasa estipulada en la tasa. Si es mayor, se bloquea dicha IP
                         #y se anade el instante de bloqueo.
@@ -226,69 +227,41 @@ class SimpleSwitch13(app_manager.RyuApp):
                                 if((tasa_calculada > tasa_politica) & (IP_origen not in Politicas['Datos'][IP_destino][politica]['IPs_bloqueadas'])):
                                     #print("Debe bloquearse " + IP_origen)
                                     Politicas['Datos'][IP_destino][politica]['IPs_bloqueadas'].update({IP_origen:instante_llegada})
-                                                                
-                                else: 
-                                    eth = pkt.get_protocols(ethernet.ethernet)[0] #ryu.lib.packet.ethernet.ethernet
-                                    if eth.ethertype == ether_types.ETH_TYPE_LLDP:
-                                        # ignore lldp packet
-                                        return
-                                    
-                                    dst = eth.dst
-                                    src = eth.src
+                                    CONDICIONBLOQUEO = 0
 
-                                    dpid = format(datapath.id, "d").zfill(16)
-                                    self.mac_to_port.setdefault(dpid, {})
+                            if(CONDICIONBLOQUEO == 1):
 
-                                    self.logger.debug("packet in %s %s %s %s", dpid, src, dst, in_port)
-                                    # learn a mac address to avoid FLOOD next time.
-                                    self.mac_to_port[dpid][src] = in_port
+                                eth = pkt.get_protocols(ethernet.ethernet)[0] #ryu.lib.packet.ethernet.ethernet
+                                if eth.ethertype == ether_types.ETH_TYPE_LLDP:
+                                    # ignore lldp packet
+                                    return
+                                
+                                dst = eth.dst
+                                src = eth.src
 
-                                    if dst in self.mac_to_port[dpid]:
-                                        out_port = self.mac_to_port[dpid][dst]
-                                    else:
-                                        out_port = ofproto.OFPP_FLOOD
+                                dpid = format(datapath.id, "d").zfill(16)
+                                self.mac_to_port.setdefault(dpid, {})
 
-                                    actions = [parser.OFPActionOutput(out_port)]                            
-                                    data = None
-                                    if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                                        data = msg.data
-                                    
-                                    out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
-                                                            in_port=in_port, actions=actions, data=data)
-                                    datapath.send_msg(out)
+                                self.logger.debug("packet in %s %s %s %s", dpid, src, dst, in_port)
+                                # learn a mac address to avoid FLOOD next time.
+                                self.mac_to_port[dpid][src] = in_port
 
-                            with open('Politicas.json', 'w') as file:
-                                json.dump(Politicas,file,indent=4)
+                                if dst in self.mac_to_port[dpid]:
+                                    out_port = self.mac_to_port[dpid][dst]
+                                else:
+                                    out_port = ofproto.OFPP_FLOOD
 
-                else:
-                    eth = pkt.get_protocols(ethernet.ethernet)[0] #ryu.lib.packet.ethernet.ethernet
-                    if eth.ethertype == ether_types.ETH_TYPE_LLDP:
-                                # ignore lldp packet
-                        return
-                            
-                    dst = eth.dst
-                    src = eth.src
+                                actions = [parser.OFPActionOutput(out_port)]                            
+                                data = None
+                                if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                                    data = msg.data
+                                
+                                out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
+                                                        in_port=in_port, actions=actions, data=data)
+                                datapath.send_msg(out)
 
-                    dpid = format(datapath.id, "d").zfill(16)
-                    self.mac_to_port.setdefault(dpid, {})
-
-                    self.logger.debug("packet in %s %s %s %s", dpid, src, dst, in_port)
-                    # learn a mac address to avoid FLOOD next time.
-                    self.mac_to_port[dpid][src] = in_port
-
-                    if dst in self.mac_to_port[dpid]:
-                        out_port = self.mac_to_port[dpid][dst]
-                    else:
-                        out_port = ofproto.OFPP_FLOOD
-
-                    actions = [parser.OFPActionOutput(out_port)]        
-                    data = None
-                    if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                        data = msg.data
-                        
-                        out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
-                                                    in_port=in_port, actions=actions, data=data)
-                        datapath.send_msg(out)
+                        with open('Politicas.json', 'w') as file:
+                            json.dump(Politicas,file,indent=4)
 
 class ListaPaquetes:
     
