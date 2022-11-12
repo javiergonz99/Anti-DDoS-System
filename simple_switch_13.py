@@ -291,43 +291,19 @@ class ListaPaquetes:
 
     #Método que permite calcula la tasa de llegada.
     def calcula_tasa(self):
-        #Se obtiene el tamano de la lista de PAQ-SEQ y se guarda el primer y ultimo seg registrado de la lista
+        #Se obtiene el tamano de la lista de PAQ-SEQ y se guarda el ultimo seg registrado de la lista
         self.CW = len(list(self.paquetes_segundos.keys()))
-        primer_seg_registrado = int(list(self.paquetes_segundos.keys())[0])
         ultimo_seg_registrado = int(list(self.paquetes_segundos.keys())[self.CW-1])
         suma_paquetes = 0
-        #Se calcula la diferencia entre el ultimo segundo y el primero registrado, y si es igual al tamaño de la 
-        #ventana de tiempo calcula la tasa en el periodo de la ventana de tiempo, como por ejemplo en los ultimos
-        #5 segundos
-        ventana_calculada = ultimo_seg_registrado - primer_seg_registrado
+    
         TASA = 0
-
+        #Se comprueba si cada uno de los claves del diccionario es mayor que la resta del último segundo registrado menos el tamano ventana. En caso afirmativo, se
+        #se anade el total de paquetes de ese segundo. 
         for registro in range(self.CW):
             if(int(list(self.paquetes_segundos.keys())[registro]) >= ultimo_seg_registrado - self.CW):
                 suma_paquetes = suma_paquetes + list(self.paquetes_segundos.values())[registro]
-        
-        '''
-        if((self.CW - 1) == ventana_calculada):
-            for paquetes in range(self.CW):
-                suma_paquetes = suma_paquetes + list(self.paquetes_segundos.values())[paquetes]
-        '''
-
+       
         TASA = suma_paquetes/(float(self.CW))
         
         return TASA
         
-    def anade_paquete(self,TS,ListaSEGUNDOS):
-        #se redondea el timestamp hacia abajo
-        self.paquetes_segundos = ListaSEGUNDOS
-        #Lo tengo que pasar a STR porque al obtener el diccionario SEG-PAQ de cada origen, los SEG aparecen como string  
-        TS_redondeado = str(int(math.floor(TS)))
-        #Se comprueba si el segundo en el que ha llegado el paquete esta en el diccionario. En caso afirmativo, se suma 1 a ese segundo
-        #y en caso negativo se elimina la primera posicion del diccionario y se anade el nuevo seg al final con valor 1.
-        if(TS_redondeado in self.paquetes_segundos):
-            self.paquetes_segundos[TS_redondeado] = self.paquetes_segundos[TS_redondeado] + 1
-        else:
-            valor_eliminar = next(iter(self.paquetes_segundos))  #Coge el primer valor de la primera posicion del diccionario
-            del self.paquetes_segundos[valor_eliminar]
-            self.paquetes_segundos.setdefault(TS_redondeado, 1)
-        
-        return self.paquetes_segundos
