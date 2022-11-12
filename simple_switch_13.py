@@ -300,7 +300,7 @@ class ListaPaquetes:
         #Se comprueba si cada uno de los claves del diccionario es mayor que la resta del último segundo registrado menos el tamano ventana. En caso afirmativo, se
         #se anade el total de paquetes de ese segundo. 
         for registro in range(self.CW):
-            if(int(list(self.paquetes_segundos.keys())[registro]) >= ultimo_seg_registrado - self.CW):
+            if(int(list(self.paquetes_segundos.keys())[registro]) > ultimo_seg_registrado - self.CW):
                 suma_paquetes = suma_paquetes + list(self.paquetes_segundos.values())[registro]
        
         TASA = suma_paquetes/(float(self.CW))
