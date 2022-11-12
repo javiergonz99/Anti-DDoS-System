@@ -225,7 +225,6 @@ class SimpleSwitch13(app_manager.RyuApp):
                                 print("\tTasa trafico: " + str(tasa_calculada) + " paq/seg. Ventana: " + str(CONTADOR_PAQUETES.CW))
                                 
                                 if((tasa_calculada > tasa_politica) & (IP_origen not in Politicas['Datos'][IP_destino][politica]['IPs_bloqueadas'])):
-                                    #print("Debe bloquearse " + IP_origen)
                                     Politicas['Datos'][IP_destino][politica]['IPs_bloqueadas'].update({IP_origen:instante_llegada})
                                     CONDICIONBLOQUEO = 0
 
@@ -272,7 +271,25 @@ class ListaPaquetes:
         #Se crea un diccionario del tamano de la ventana de tiempo que se use en la tasa. 
         for pos in range(CW):
             self.paquetes_segundos[pos] = 0 
-    
+
+    #Metodo que permite anadir un paquete al segundo determinado.
+    def anade_paquete(self,TS,ListaSEGUNDOS):
+        #se redondea el timestamp hacia abajo
+        self.paquetes_segundos = ListaSEGUNDOS
+        #Lo tengo que pasar a STR porque al obtener el diccionario SEG-PAQ de cada origen, los SEG aparecen como string  
+        TS_redondeado = str(int(math.floor(TS)))
+        #Se comprueba si el segundo en el que ha llegado el paquete esta en el diccionario. En caso afirmativo, se suma 1 a ese segundo
+        #y en caso negativo se elimina la primera posicion del diccionario y se anade el nuevo seg al final con valor 1.
+        if(TS_redondeado in self.paquetes_segundos):
+            self.paquetes_segundos[TS_redondeado] = self.paquetes_segundos[TS_redondeado] + 1
+        else:
+            valor_eliminar = next(iter(self.paquetes_segundos))  #Coge el primer valor de la primera posicion del diccionario
+            del self.paquetes_segundos[valor_eliminar]
+            self.paquetes_segundos.setdefault(TS_redondeado, 1)
+        
+        return self.paquetes_segundos
+
+    #Método que permite calcula la tasa de llegada.
     def calcula_tasa(self):
         #Se obtiene el tamano de la lista de PAQ-SEQ y se guarda el primer y ultimo seg registrado de la lista
         self.CW = len(list(self.paquetes_segundos.keys()))
