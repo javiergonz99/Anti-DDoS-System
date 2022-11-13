@@ -13,7 +13,7 @@ import time
 
 
 def myNetwork():
-
+    #PRIMERA PARTE DEL SCRIPT
     net = Mininet( topo=None,
                    build=False,
                    ipBase='10.0.0.0/8')
@@ -46,7 +46,8 @@ def myNetwork():
     net.get('s1').start([])
 
     net.start()
-    
+
+    #SEGUNDA PARTE DEL SCRIPT
     #PARA ABRIR WIRESHARK
     time.sleep(10)
     '''
@@ -58,7 +59,7 @@ def myNetwork():
         time.sleep(1)
     
     
-    #SEGUNDO ESCENARIO: HOST 2 MANDA 25 PAQUETES POR SEGUNDO CADA 6 SEGUNDOS AL HOST 1
+    #SEGUNDO ESCENARIO: HOST 2 MANDA 5 PAQUETES POR SEGUNDO CADA 6 SEGUNDOS AL HOST 1
     info("HOST 2 manda 5 paq/seg al HOST1\n")
     for i in range(10):
         for j in range(5):
