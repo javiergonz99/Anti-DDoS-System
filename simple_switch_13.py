@@ -115,7 +115,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         global CONTADOR_PAQUETES
         CONDICION = 1
         CONDICIONBLOQUEO = 1
-        OTRO_PUERTO = 0
+        
         
         
         for p in pkt.protocols:
@@ -262,39 +262,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                                 
                         with open('Politicas.json', 'w') as file:
                             json.dump(Politicas,file,indent=4)
-                '''
-                    else:
-                        OTRO_PUERTO = 1
-                        
-                
-                if(OTRO_PUERTO == 1):
-                    eth = pkt.get_protocols(ethernet.ethernet)[0] #ryu.lib.packet.ethernet.ethernet
-                    if eth.ethertype == ether_types.ETH_TYPE_LLDP:
-                    # ignore lldp packet
-                        return
-                                                
-                    dst = eth.dst
-                    src = eth.src
-                    dpid = format(datapath.id, "d").zfill(16)
-                    self.mac_to_port.setdefault(dpid, {})
 
-                    self.logger.debug("packet in %s %s %s %s", dpid, src, dst, in_port)
-                    # learn a mac address to avoid FLOOD next time.
-                    self.mac_to_port[dpid][src] = in_port
-
-                    if dst in self.mac_to_port[dpid]:
-                        out_port = self.mac_to_port[dpid][dst]
-                    else:
-                        out_port = ofproto.OFPP_FLOOD
-
-                    actions = [parser.OFPActionOutput(out_port)]                            
-                    data = None
-                    if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                        data = msg.data
-                                                
-                    out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port, actions=actions, data=data)
-                    datapath.send_msg(out)
-                '''
 class ListaPaquetes:
     
     def __init__(self, CW):  
